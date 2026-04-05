@@ -9,6 +9,7 @@ const THEATERS = [
 	'imax-indiana-state-museum',
 	'cinemark-dallas-imax',
 	'regal-opry-mills-imax',
+	'regal-mall-georgia-imax',
 ];
 
 const previousEmbeds: { [key: string]: string } = {};
