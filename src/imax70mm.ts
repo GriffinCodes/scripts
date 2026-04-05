@@ -11,7 +11,6 @@ const THEATERS = [
 	'regal-opry-mills-imax',
 ];
 
-// Store the previous embed state to detect changes
 const previousEmbeds: { [key: string]: string } = {};
 
 function formatDateString(dateStr: string): string {
@@ -110,7 +109,7 @@ async function checkTheaters() {
 		let movies = result?.hits[0]?.events?.map(event => event?.movie);
 		let match = movies.find(movie => movie.slug === MOVIE);
 
-		console.log('  Available movies', movies.map(movie => movie.name))
+		console.log('  Available movies', JSON.stringify(movies.map(movie => movie.name)))
 		console.log('  Found match:', !!match)
 
 		if (!!match) {
@@ -142,14 +141,11 @@ async function checkTheaters() {
 
 		await utils.sleep(1000)
 	}
+	console.log()
 }
 
 (async () => {
 	console.log('Starting showtime checker...')
 	checkTheaters();
-
-	// Repeat every minute (60000 ms)
-	setInterval(() => {
-		checkTheaters();
-	}, 60000);
+	setInterval(() => checkTheaters(), 60000);
 })();
