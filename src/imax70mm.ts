@@ -1,9 +1,11 @@
 import * as utils from "./utils";
 import { arg } from "./utils";
+import * as fs from "fs";
+import * as path from "path";
 
-const MOVIE = arg('movie')
-if (!MOVIE)
-	throw new Error('No movie specified, use --movie=movie-slug');
+const MOVIES = arg('movies').split(',');
+if (!MOVIES)
+	throw new Error('No movie specified, use --movies=movie-slugs');
 
 const THEATERS = [
 	'imax-indiana-state-museum',
@@ -12,7 +14,9 @@ const THEATERS = [
 	'regal-mall-georgia-imax',
 ];
 
-const previousEmbeds: { [key: string]: string } = {};
+const CACHE_FILE = path.join(__dirname, '..', 'resources', 'embeds-cache.json');
+
+let previousEmbeds: { [key: string]: string } = {};
 
 function formatDateString(dateStr: string): string {
 	const year = dateStr.substring(0, 4);
@@ -21,10 +25,35 @@ function formatDateString(dateStr: string): string {
 	return `${month}/${day}/${year}`;
 }
 
+function loadCache(): void {
+	try {
+		if (fs.existsSync(CACHE_FILE)) {
+			const data = fs.readFileSync(CACHE_FILE, 'utf-8');
+			previousEmbeds = JSON.parse(data);
+			console.log('Loaded cache from file with', Object.keys(previousEmbeds).length, 'entries');
+		}
+	} catch (error) {
+		console.error('Error loading cache file:', error);
+	}
+}
+
+function saveCache(): void {
+	try {
+		// Ensure the directory exists
+		const dir = path.dirname(CACHE_FILE);
+		if (!fs.existsSync(dir)) {
+			fs.mkdirSync(dir, { recursive: true });
+		}
+		fs.writeFileSync(CACHE_FILE, JSON.stringify(previousEmbeds, null, 2), 'utf-8');
+	} catch (error) {
+		console.error('Error saving cache file:', error);
+	}
+}
+
 function createShowtimesEmbed(match: any, theater: any, result: any) {
 	const fields: any[] = [];
 
-	const event = result?.hits[0]?.events?.find(e => e?.movie?.slug === MOVIE);
+	const event = result?.hits[0]?.events?.find(event => MOVIES.includes(event?.movie?.slug));
 
 	if (!event || !event.showtimes) {
 		return null;
@@ -88,7 +117,7 @@ function createShowtimesEmbed(match: any, theater: any, result: any) {
 
 async function checkTheaters() {
 	for (const theater of THEATERS) {
-		console.log('Looking for', MOVIE, 'at', theater, '...')
+		console.log('Looking for', MOVIES, 'at', theater, '...')
 
 		const requestOptions: any = {
 			method: "POST",
@@ -108,37 +137,41 @@ async function checkTheaters() {
 		let result: any = await response.json();
 
 		let movies = result?.hits[0]?.events?.filter(event => event?.movieVariantLabel === '70MM').map(event => event?.movie);
-		let match = movies?.find(movie => movie?.slug === MOVIE);
-
 		console.log('  Available movies', JSON.stringify(movies?.map(movie => movie?.name)))
-		console.log('  Found match:', !!match)
 
-		if (!!match) {
-			const embed = createShowtimesEmbed(match, result.hits[0], result);
+		for (let MOVIE of MOVIES) {
+			let match = movies?.find(movie => movie?.slug === MOVIE);
+			console.log('  Found match:', !!match)
 
-			if (embed) {
-				const embedString = JSON.stringify(embed);
-				const cacheKey = `${theater}`;
+			if (!!match) {
+				const embed = createShowtimesEmbed(match, result.hits[0], result);
 
-				// Only post if the embed is different from the previous one
-				if (previousEmbeds[cacheKey] !== embedString) {
-					console.log('  Embed changed for', theater, '- notifying...')
-					previousEmbeds[cacheKey] = embedString;
+				if (embed) {
+					const embedString = JSON.stringify(embed);
+					const cacheKey = `${theater}-${MOVIE}`;
 
-					let webhookUrl = 'https://discord.com/api/webhooks/1490391461491900636/nqc4wd19oa6rSTl9Bw78hMfcd0xjKiCQ8Gm59zTARPfhnWA8TswiUCFyqG2veP2GIaGQ'
+					// Only post if the embed is different from the previous one
+					if (previousEmbeds[cacheKey] !== embedString) {
+						console.log('  Embed changed for', theater, '- notifying...')
+						previousEmbeds[cacheKey] = embedString;
+						saveCache();
 
-					fetch(webhookUrl, {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({
-							embeds: [embed]
+						let webhookUrl = 'https://discord.com/api/webhooks/1490391461491900636/nqc4wd19oa6rSTl9Bw78hMfcd0xjKiCQ8Gm59zTARPfhnWA8TswiUCFyqG2veP2GIaGQ'
+
+						fetch(webhookUrl, {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify({
+								embeds: [embed]
+							})
 						})
-					})
-				} else {
-					console.log('  Embed unchanged for', theater, '- skipping notification')
+					} else {
+						console.log('  Embed unchanged for', theater, '- skipping notification')
+					}
 				}
 			}
 		}
+
 
 		await utils.sleep(1000)
 	}
@@ -147,6 +180,7 @@ async function checkTheaters() {
 
 (async () => {
 	console.log('Starting showtime checker...')
+	loadCache();
 	checkTheaters();
 	setInterval(() => checkTheaters(), 60000);
 })();
