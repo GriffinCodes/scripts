@@ -1,4 +1,3 @@
-
 import * as utils from "./utils";
 import { arg } from "./utils";
 
@@ -11,6 +10,9 @@ const THEATERS = [
 	'cinemark-dallas-imax',
 	'regal-opry-mills-imax',
 ];
+
+// Store the previous embed state to detect changes
+const previousEmbeds: { [key: string]: string } = {};
 
 function formatDateString(dateStr: string): string {
 	const year = dateStr.substring(0, 4);
@@ -84,7 +86,7 @@ function createShowtimesEmbed(match: any, theater: any, result: any) {
 	return embed;
 }
 
-(async () => {
+async function checkTheaters() {
 	for (const theater of THEATERS) {
 		console.log('Looking for', MOVIE, 'at', theater, '...')
 
@@ -108,26 +110,46 @@ function createShowtimesEmbed(match: any, theater: any, result: any) {
 		let movies = result?.hits[0]?.events?.map(event => event?.movie);
 		let match = movies.find(movie => movie.slug === MOVIE);
 
-		console.log('Available movies', movies.map(movie => movie.name))
-		console.log('Found match:', !!match)
+		console.log('  Available movies', movies.map(movie => movie.name))
+		console.log('  Found match:', !!match)
 
 		if (!!match) {
-			console.log('Found match, notifying...')
-			let webhookUrl = 'https://discord.com/api/webhooks/1490391461491900636/nqc4wd19oa6rSTl9Bw78hMfcd0xjKiCQ8Gm59zTARPfhnWA8TswiUCFyqG2veP2GIaGQ'
-
 			const embed = createShowtimesEmbed(match, result.hits[0], result);
 
 			if (embed) {
-				fetch(webhookUrl, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						embeds: [embed]
+				const embedString = JSON.stringify(embed);
+				const cacheKey = `${theater}`;
+
+				// Only post if the embed is different from the previous one
+				if (previousEmbeds[cacheKey] !== embedString) {
+					console.log('  Embed changed for', theater, '- notifying...')
+					previousEmbeds[cacheKey] = embedString;
+
+					let webhookUrl = 'https://discord.com/api/webhooks/1490391461491900636/nqc4wd19oa6rSTl9Bw78hMfcd0xjKiCQ8Gm59zTARPfhnWA8TswiUCFyqG2veP2GIaGQ'
+
+					fetch(webhookUrl, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							embeds: [embed]
+						})
 					})
-				})
+				} else {
+					console.log('  Embed unchanged for', theater, '- skipping notification')
+				}
 			}
 		}
 
 		await utils.sleep(1000)
 	}
+}
+
+(async () => {
+	console.log('Starting showtime checker...')
+	checkTheaters();
+
+	// Repeat every minute (60000 ms)
+	setInterval(() => {
+		checkTheaters();
+	}, 60000);
 })();
