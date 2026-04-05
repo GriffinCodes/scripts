@@ -136,7 +136,7 @@ async function checkTheaters() {
 		let response = await fetch("https://10mxkgb0uh-dsn.algolia.net/1/indexes/dev_web23_showtimes/query", requestOptions);
 		let result: any = await response.json();
 
-		let movies = result?.hits[0]?.events?.filter(event => event?.movieVariantLabel === '70MM').map(event => event?.movie);
+		let movies = result?.hits[0]?.events?.map(event => event?.movie);
 		console.log('  Available movies', JSON.stringify(movies?.map(movie => movie?.name)))
 
 		for (let MOVIE of MOVIES) {
