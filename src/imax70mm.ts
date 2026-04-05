@@ -140,8 +140,9 @@ async function checkTheaters() {
 		console.log('  Available movies', JSON.stringify(movies?.map(movie => movie?.name)))
 
 		for (let MOVIE of MOVIES) {
+			console.log('  Checking movie', MOVIE)
 			let match = movies?.find(movie => movie?.slug === MOVIE);
-			console.log('  Found match:', !!match)
+			console.log('    Found match:', !!match)
 
 			if (!!match) {
 				const embed = createShowtimesEmbed(match, result.hits[0], result);
@@ -152,7 +153,7 @@ async function checkTheaters() {
 
 					// Only post if the embed is different from the previous one
 					if (previousEmbeds[cacheKey] !== embedString) {
-						console.log('  Embed changed for', cacheKey, '- notifying...')
+						console.log('    Embed changed for', cacheKey, '- notifying...')
 						previousEmbeds[cacheKey] = embedString;
 						saveCache();
 
@@ -166,7 +167,7 @@ async function checkTheaters() {
 							})
 						})
 					} else {
-						console.log('  Embed unchanged for', cacheKey, '- skipping notification')
+						console.log('    Embed unchanged for', cacheKey, '- skipping notification')
 					}
 				}
 			}
