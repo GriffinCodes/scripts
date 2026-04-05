@@ -152,7 +152,7 @@ async function checkTheaters() {
 
 					// Only post if the embed is different from the previous one
 					if (previousEmbeds[cacheKey] !== embedString) {
-						console.log('  Embed changed for', theater, '- notifying...')
+						console.log('  Embed changed for', cacheKey, '- notifying...')
 						previousEmbeds[cacheKey] = embedString;
 						saveCache();
 
@@ -166,7 +166,7 @@ async function checkTheaters() {
 							})
 						})
 					} else {
-						console.log('  Embed unchanged for', theater, '- skipping notification')
+						console.log('  Embed unchanged for', cacheKey, '- skipping notification')
 					}
 				}
 			}
