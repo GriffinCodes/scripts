@@ -35,6 +35,10 @@ export function wait(ms, func) {
 	return setTimeout(func, ms);
 }
 
+export function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export function file(fileName: string) {
 	return path.join(__dirname, fileName);
 }

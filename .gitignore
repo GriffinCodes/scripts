@@ -1,3 +1,4 @@
 /src/*.js
 /resources
 /node_modules
+/tsconfig.tsbuildinfo
