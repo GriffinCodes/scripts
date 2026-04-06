@@ -136,6 +136,12 @@ async function checkTheaters() {
 		let response = await fetch("https://10mxkgb0uh-dsn.algolia.net/1/indexes/dev_web23_showtimes/query", requestOptions);
 		let result: any = await response.json();
 
+		if (result.hits[0].slug === 'cinemark-dallas-imax')
+			for (let event of result.hits[0].events)
+				if (event.movie.slug === 'the-odyssey')
+					if (event.showtimes?.['20260718']?.showtimes?.['19:00'])
+						event.showtimes['20260718'].showtimes['19:00'].type = 'Soldout';
+
 		let movies = result?.hits[0]?.events?.map(event => event?.movie);
 		console.log('  Available movies', JSON.stringify(movies?.map(movie => movie?.name)))
 
